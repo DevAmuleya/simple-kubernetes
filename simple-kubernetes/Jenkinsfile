@@ -2,8 +2,9 @@ pipeline {
     agent any
 
     environment {
-        IMAGE_NAME = "devamuleya/simple-kubernetes"
+        IMAGE_NAME = "Gazma723/simple-kubernetes"
         IMAGE_TAG  = "latest"
+        KUBE_CONFIG_CRED_ID = 'kubeconfig-cred' // Jenkins credential ID for kubeconfig file
     }
 
     stages {
@@ -16,9 +17,9 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                sh '''
+                sh """
                 docker build -t $IMAGE_NAME:$IMAGE_TAG .
-                '''
+                """
             }
         }
 
@@ -36,19 +37,33 @@ pipeline {
 
         stage('Push Image to Docker Hub') {
             steps {
-                sh '''
+                sh """
                 docker push $IMAGE_NAME:$IMAGE_TAG
-                '''
+                """
             }
         }
 
         stage('Deploy to Kubernetes') {
             steps {
-                sh '''
-                kubectl apply -f k8s/deployment.yaml
-                kubectl apply -f k8s/service.yaml
-                '''
+                // Use kubeconfig stored as Jenkins Secret File
+                withCredentials([file(credentialsId: KUBE_CONFIG_CRED_ID, variable: 'KUBECONFIG_FILE')]) {
+                    sh """
+                    export KUBECONFIG=$KUBECONFIG_FILE
+                    kubectl apply -f k8s/deployment.yaml
+                    kubectl apply -f k8s/service.yaml
+                    kubectl rollout status deployment/fastapi-deployment
+                    """
+                }
             }
+        }
+    }
+
+    post {
+        success {
+            echo "✅ Deployment Successful!"
+        }
+        failure {
+            echo "❌ Deployment Failed. Check logs for details."
         }
     }
 }
