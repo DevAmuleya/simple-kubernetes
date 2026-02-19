@@ -80,7 +80,7 @@ class BookUpdateModel(BaseModel):
 # ✅ HOME PAGE
 @app.get("/")
 async def get_books():
-    return {"message": "FastAPI running on Kubernetes 🚀"}
+    return {"message": "FastAPI is about, running on Kubernetes 🚀"}
 
 # ✅ READ ALL
 @app.get("/books", response_model=List[Book])
