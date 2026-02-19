@@ -4,7 +4,6 @@ pipeline {
     environment {
         IMAGE_NAME = "Gazma723/simple-kubernetes"
         IMAGE_TAG  = "latest"
-        KUBE_CONFIG_CRED_ID = 'kubeconfig-cred' // Jenkins credential ID for kubeconfig file
     }
 
     stages {
@@ -18,7 +17,7 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 sh """
-                docker build -t $IMAGE_NAME:$IMAGE_TAG .
+                docker build -t ${IMAGE_NAME}:${IMAGE_TAG} .
                 """
             }
         }
@@ -30,7 +29,9 @@ pipeline {
                     usernameVariable: 'DOCKER_USER',
                     passwordVariable: 'DOCKER_PASS'
                 )]) {
-                    sh 'echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin'
+                    sh """
+                    echo ${DOCKER_PASS} | docker login -u ${DOCKER_USER} --password-stdin
+                    """
                 }
             }
         }
@@ -38,22 +39,18 @@ pipeline {
         stage('Push Image to Docker Hub') {
             steps {
                 sh """
-                docker push $IMAGE_NAME:$IMAGE_TAG
+                docker push ${IMAGE_NAME}:${IMAGE_TAG}
                 """
             }
         }
 
         stage('Deploy to Kubernetes') {
             steps {
-                // Use kubeconfig stored as Jenkins Secret File
-                withCredentials([file(credentialsId: KUBE_CONFIG_CRED_ID, variable: 'KUBECONFIG_FILE')]) {
-                    sh """
-                    export KUBECONFIG=$KUBECONFIG_FILE
-                    kubectl apply -f k8s/deployment.yaml
-                    kubectl apply -f k8s/service.yaml
-                    kubectl rollout status deployment/fastapi-deployment
-                    """
-                }
+                sh """
+                kubectl apply -f k8s/deployment.yaml
+                kubectl apply -f k8s/service.yaml
+                kubectl rollout status deployment/fastapi-deployment
+                """
             }
         }
     }
