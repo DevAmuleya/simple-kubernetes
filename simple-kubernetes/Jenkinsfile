@@ -2,8 +2,11 @@ pipeline {
     agent any
 
     environment {
-        IMAGE_NAME = "Gazma723/simple-kubernetes"
-        IMAGE_TAG  = "latest"
+        REGISTRY   = "docker.io"
+        NAMESPACE  = "gazma723"                  // must be lowercase
+        IMAGE      = "simple-kubernetes"
+        TAG        = "latest"
+        FULL_IMAGE = "docker.io/gazma723/simple-kubernetes:latest"
     }
 
     stages {
@@ -16,9 +19,9 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                sh """
-                docker build -t ${IMAGE_NAME}:${IMAGE_TAG} simple-kubernetes
-                """
+                sh '''
+                docker build -t $FULL_IMAGE .
+                '''
             }
         }
 
@@ -29,29 +32,28 @@ pipeline {
                     usernameVariable: 'DOCKER_USER',
                     passwordVariable: 'DOCKER_PASS'
                 )]) {
-                    sh """
-                    echo ${DOCKER_PASS} | docker login -u ${DOCKER_USER} --password-stdin
-                    """
+                    sh '''
+                    echo "$DOCKER_PASS" | docker login docker.io -u "$DOCKER_USER" --password-stdin
+                    '''
                 }
             }
         }
 
         stage('Push Image to Docker Hub') {
             steps {
-                sh """
-                docker push ${IMAGE_NAME}:${IMAGE_TAG}
-                """
+                sh '''
+                docker push $FULL_IMAGE
+                '''
             }
         }
 
         stage('Deploy to Kubernetes') {
             steps {
-                sh """
-                cd simple-kubernetes
+                sh '''
                 kubectl apply -f k8s/deployment.yaml
                 kubectl apply -f k8s/service.yaml
                 kubectl rollout status deployment/kubernetes-deployment
-                """
+                '''
             }
         }
     }
