@@ -47,9 +47,10 @@ pipeline {
         stage('Deploy to Kubernetes') {
             steps {
                 sh """
+                cd simple-kubernetes
                 kubectl apply -f k8s/deployment.yaml
                 kubectl apply -f k8s/service.yaml
-                kubectl rollout status deployment/fastapi-deployment
+                kubectl rollout status deployment/kubernetes-deployment
                 """
             }
         }
