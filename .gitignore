@@ -1,0 +1,16 @@
+# Environment
+.env
+*.env
+data_crud/.env
+
+# Python junk and venvs (good hygiene)
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.DS_Store
+.vscode/
