@@ -15,5 +15,6 @@ spec:
       containers:
         - name: kubernetes
           image: devamuleya/simple-kubernetes:latest
+          imagePullPolicy: Always
           ports:
             - containerPort: 8000
