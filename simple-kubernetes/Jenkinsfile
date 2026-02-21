@@ -46,6 +46,7 @@ pipeline {
                     sh '''
                     kubectl apply -f k8s/deployment.yml
                     kubectl apply -f k8s/service.yml
+                    kubectl rollout restart deployment/kubernetes-deployment
                     kubectl rollout status deployment/kubernetes-deployment
                     '''
                 }
