@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment {
-        IMAGE_NAME = "simple-kubernetes"
+        IMAGE_NAME = "devamuleya/simple-kubernetes"
         IMAGE_TAG  = "latest"
     }
 
