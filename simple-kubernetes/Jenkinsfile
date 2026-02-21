@@ -44,6 +44,12 @@ pipeline {
                     sh '''
                     kubectl apply -f k8s/deployment.yml
                     kubectl apply -f k8s/service.yml
+
+                    # Force Kubernetes to pull from Docker Hub
+                    kubectl set image deployment/kubernetes-deployment \
+                      kubernetes-deployment=$IMAGE_NAME:$IMAGE_TAG
+
+                    # Restart pods to pull new image
                     kubectl rollout restart deployment/kubernetes-deployment
                     kubectl rollout status deployment/kubernetes-deployment
                     '''
