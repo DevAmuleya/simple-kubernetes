@@ -2,11 +2,8 @@ pipeline {
     agent any
 
     environment {
-        REGISTRY   = "docker.io"
-        NAMESPACE  = "gazma723"                  // must be lowercase
-        IMAGE      = "simple-kubernetes"
-        TAG        = "latest"
-        FULL_IMAGE = "docker.io/gazma723/simple-kubernetes:latest"
+        IMAGE_NAME = "simple-kubernetes"
+        IMAGE_TAG  = "latest"
     }
 
     stages {
@@ -19,9 +16,9 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                sh '''
-                docker build -t $FULL_IMAGE .
-                '''
+                dir('simple-kubernetes') {
+                    sh 'docker build -t $IMAGE_NAME:$IMAGE_TAG .'
+                }
             }
         }
 
@@ -32,28 +29,26 @@ pipeline {
                     usernameVariable: 'DOCKER_USER',
                     passwordVariable: 'DOCKER_PASS'
                 )]) {
-                    sh '''
-                    echo "$DOCKER_PASS" | docker login docker.io -u "$DOCKER_USER" --password-stdin
-                    '''
+                    sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
                 }
             }
         }
 
         stage('Push Image to Docker Hub') {
             steps {
-                sh '''
-                docker push $FULL_IMAGE
-                '''
+                sh 'docker push $IMAGE_NAME:$IMAGE_TAG'
             }
         }
 
         stage('Deploy to Kubernetes') {
             steps {
-                sh '''
-                kubectl apply -f k8s/deployment.yaml
-                kubectl apply -f k8s/service.yaml
-                kubectl rollout status deployment/kubernetes-deployment
-                '''
+                dir('simple-kubernetes') {
+                    sh '''
+                    kubectl apply -f k8s/deployment.yaml
+                    kubectl apply -f k8s/service.yaml
+                    kubectl rollout status deployment/kubernetes-deployment
+                    '''
+                }
             }
         }
     }
@@ -63,7 +58,7 @@ pipeline {
             echo "✅ Deployment Successful!"
         }
         failure {
-            echo "❌ Deployment Failed. Check logs for details."
+            echo "❌ Deployment Failed!"
         }
     }
 }
