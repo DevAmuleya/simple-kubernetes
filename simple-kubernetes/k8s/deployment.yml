@@ -6,14 +6,14 @@ spec:
   replicas: 2
   selector:
     matchLabels:
-      app: fastapi
+      app: kubernetes
   template:
     metadata:
       labels:
-        app: fastapi
+        app: kubernetes
     spec:
       containers:
-        - name: fastapi
+        - name: kubernetes
           image: devamuleya/simple-kubernetes:latest
           ports:
             - containerPort: 8000
