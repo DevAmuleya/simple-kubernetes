@@ -1,20 +1,21 @@
 pipeline {
+
     agent any
 
     environment {
-        IMAGE_NAME = "dworkspace1/simple-kubernetes"
-        IMAGE_TAG  = "${BUILD_NUMBER}"
+        DOCKERHUB_REPO = "dworkspace1/simple-kubernetes"
+        IMAGE_TAG      = "${BUILD_NUMBER}"
+    }
+
+    options {
+        timestamps()
+        buildDiscarder(logRotator(numToKeepStr: '15'))
+        disableConcurrentBuilds()
     }
 
     stages {
 
-        stage('Clean Workspace') {
-            steps {
-                cleanWs()
-            }
-        }
-
-        stage('Checkout Code') {
+        stage('Checkout') {
             steps {
                 checkout scm
             }
@@ -22,23 +23,21 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                sh """
-                docker build --no-cache \
-                  -t $IMAGE_NAME:$IMAGE_TAG .
-                """
+                sh '''
+                docker build -t $DOCKERHUB_REPO:$IMAGE_TAG .
+                '''
             }
         }
 
-        stage('Login to DockerHub') {
+        stage('Docker Login') {
             steps {
                 withCredentials([usernamePassword(
-                    credentialsId: 'dockerhub-creds',
+                    credentialsId: 'dockerhub-prod',
                     usernameVariable: 'DOCKER_USER',
                     passwordVariable: 'DOCKER_PASS'
                 )]) {
                     sh '''
-                    echo "$DOCKER_PASS" | docker login \
-                      -u "$DOCKER_USER" --password-stdin
+                    echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
                     '''
                 }
             }
@@ -46,28 +45,50 @@ pipeline {
 
         stage('Push Image') {
             steps {
-                sh "docker push $IMAGE_NAME:$IMAGE_TAG"
+                sh '''
+                docker push $DOCKERHUB_REPO:$IMAGE_TAG
+                docker tag $DOCKERHUB_REPO:$IMAGE_TAG $DOCKERHUB_REPO:latest
+                docker push $DOCKERHUB_REPO:latest
+                '''
             }
         }
 
         stage('Deploy to Kubernetes') {
             steps {
-                sh """
-                kubectl set image deployment/simple-kubernetes \
-                simple-kubernetes=$IMAGE_NAME:$IMAGE_TAG
+                withCredentials([file(credentialsId: 'kubeconfig-prod', variable: 'KUBECONFIG')]) {
+                    sh '''
+                    export KUBECONFIG=$KUBECONFIG
 
-                kubectl rollout status deployment/simple-kubernetes
-                """
+                    kubectl set image deployment/simple-kubernetes \
+                    simple-kubernetes=$DOCKERHUB_REPO:$IMAGE_TAG
+
+                    kubectl rollout status deployment/simple-kubernetes
+                    '''
+                }
+            }
+        }
+
+        stage('Cleanup') {
+            steps {
+                sh '''
+                docker image prune -f
+                '''
             }
         }
     }
 
     post {
+
         success {
-            echo "✅ Deployment successful"
+            echo "Deployment Successful 🚀"
         }
+
         failure {
-            echo "❌ Deployment failed"
+            echo "Build Failed ❌"
+        }
+
+        always {
+            cleanWs()
         }
     }
 }

@@ -2,29 +2,36 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: simple-kubernetes
-  labels:
-    app: simple-kubernetes
+  namespace: default
 spec:
-  replicas: 2
-  selector:
-    matchLabels:
-      app: simple-kubernetes
+  replicas: 3
+
   strategy:
     type: RollingUpdate
     rollingUpdate:
-      maxUnavailable: 0
+      maxUnavailable: 1
       maxSurge: 1
+
+  selector:
+    matchLabels:
+      app: simple-kubernetes
+
   template:
     metadata:
       labels:
         app: simple-kubernetes
+
     spec:
       containers:
         - name: simple-kubernetes
-          image: dworkspace1/simple-kubernetes:IMAGE_TAG
-          imagePullPolicy: Always
+          image: dworkspace1/simple-kubernetes:latest
+
           ports:
             - containerPort: 8000
+
+          env:
+            - name: APP_VERSION
+              value: "production"
 
           resources:
             requests:
@@ -34,16 +41,16 @@ spec:
               cpu: "500m"
               memory: "256Mi"
 
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+
           readinessProbe:
             httpGet:
-              path: /
+              path: /health
               port: 8000
             initialDelaySeconds: 5
             periodSeconds: 5
-
-          livenessProbe:
-            httpGet:
-              path: /
-              port: 8000
-            initialDelaySeconds: 15
-            periodSeconds: 10

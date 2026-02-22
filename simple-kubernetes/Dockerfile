@@ -1,28 +1,25 @@
-# Use a lightweight Python image
-FROM python:3.11-slim
+# ---------- BUILD STAGE ----------
+FROM python:3.11-slim as builder
 
-# Prevent Python from writing pyc files
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
-
-# Set working directory
 WORKDIR /app
 
-# Install system dependencies (optional but safe)
-RUN apt-get update && apt-get install -y \
-    build-essential \
-    && rm -rf /var/lib/apt/lists/*
-
-# Install Python dependencies
 COPY requirements.txt .
-RUN pip install --upgrade pip \
-    && pip install --no-cache-dir -r requirements.txt
+RUN pip install --user --no-cache-dir -r requirements.txt
 
-# Copy application code
-COPY . .
+# ---------- RUNTIME STAGE ----------
+FROM python:3.11-slim
 
-# Expose application port
+WORKDIR /app
+
+COPY --from=builder /root/.local /root/.local
+COPY app/ ./app/
+
+ENV PATH=/root/.local/bin:$PATH
+ENV APP_VERSION=1.0
+
 EXPOSE 8000
 
-# Run FastAPI with Uvicorn
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+RUN useradd -m appuser
+USER appuser
+
+CMD ["python", "app/main.py"]
