@@ -59,10 +59,10 @@ pipeline {
                     sh '''
                     export KUBECONFIG=$KUBECONFIG
 
-                    kubectl set image deployment/simple-kubernetes \
-                    simple-kubernetes=$DOCKERHUB_REPO:$IMAGE_TAG
+                    kubectl set image deployment/simple-kubernetes-app \
+                    simple-kubernetes-app=$DOCKERHUB_REPO:$IMAGE_TAG
 
-                    kubectl rollout status deployment/simple-kubernetes
+                    kubectl rollout status deployment/simple-kubernetes-app
                     '''
                 }
             }
@@ -70,23 +70,18 @@ pipeline {
 
         stage('Cleanup') {
             steps {
-                sh '''
-                docker image prune -f
-                '''
+                sh 'docker image prune -f'
             }
         }
     }
 
     post {
-
         success {
             echo "Deployment Successful 🚀"
         }
-
         failure {
             echo "Build Failed ❌"
         }
-
         always {
             cleanWs()
         }
