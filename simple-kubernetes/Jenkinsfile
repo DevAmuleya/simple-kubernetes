@@ -3,12 +3,18 @@ pipeline {
 
     environment {
         IMAGE_NAME = "dworkspace1/simple-kubernetes"
-        IMAGE_TAG  = "latest"
+        IMAGE_TAG  = "${BUILD_NUMBER}"
     }
 
     stages {
 
-        stage('Checkout Source') {
+        stage('Clean Workspace') {
+            steps {
+                cleanWs()
+            }
+        }
+
+        stage('Checkout Code') {
             steps {
                 checkout scm
             }
@@ -16,54 +22,52 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                sh 'docker build --no-cache -t $IMAGE_NAME:$IMAGE_TAG simple-kubernetes'
+                sh """
+                docker build --no-cache \
+                  -t $IMAGE_NAME:$IMAGE_TAG .
+                """
             }
         }
 
-        stage('Login to Docker Hub') {
+        stage('Login to DockerHub') {
             steps {
                 withCredentials([usernamePassword(
                     credentialsId: 'dockerhub-creds',
                     usernameVariable: 'DOCKER_USER',
                     passwordVariable: 'DOCKER_PASS'
                 )]) {
-                    sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
+                    sh '''
+                    echo "$DOCKER_PASS" | docker login \
+                      -u "$DOCKER_USER" --password-stdin
+                    '''
                 }
             }
         }
 
-        stage('Push Image to Docker Hub') {
+        stage('Push Image') {
             steps {
-                sh 'docker push $IMAGE_NAME:$IMAGE_TAG'
+                sh "docker push $IMAGE_NAME:$IMAGE_TAG"
             }
         }
 
         stage('Deploy to Kubernetes') {
             steps {
-                dir('simple-kubernetes') {
-                    sh '''
-                    kubectl apply -f k8s/deployment.yml
-                    kubectl apply -f k8s/service.yml
+                sh """
+                kubectl set image deployment/simple-kubernetes \
+                simple-kubernetes=$IMAGE_NAME:$IMAGE_TAG
 
-                    # Force Kubernetes to pull from Docker Hub
-                    kubectl set image deployment/kubernetes-deployment \
-                      kubernetes-deployment=$IMAGE_NAME:$IMAGE_TAG
-
-                    # Restart pods to pull new image
-                    kubectl rollout restart deployment/kubernetes-deployment
-                    kubectl rollout status deployment/kubernetes-deployment
-                    '''
-                }
+                kubectl rollout status deployment/simple-kubernetes
+                """
             }
         }
     }
 
     post {
         success {
-            echo "✅ Deployment Successful!"
+            echo "✅ Deployment successful"
         }
         failure {
-            echo "❌ Deployment Failed!"
+            echo "❌ Deployment failed"
         }
     }
 }
