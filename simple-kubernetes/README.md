@@ -119,7 +119,8 @@ sudo apt update && sudo apt upgrade -y
 ### Install Java (Required for Jenkins)
 
 ```bash
-sudo apt install -y openjdk-17-jdk
+sudo apt update
+sudo apt install fontconfig openjdk-21-jre
 java -version
 ```
 
@@ -137,28 +138,21 @@ git --version
 ### Add Jenkins Repository
 
 ```bash
-curl -fsSL https://pkg.jenkins.io/debian/jenkins.io-2023.key | sudo tee \
-/usr/share/keyrings/jenkins-keyring.asc > /dev/null
-```
-
-```bash
-echo deb [signed-by=/usr/share/keyrings/jenkins-keyring.asc] \
-https://pkg.jenkins.io/debian binary/ | sudo tee \
-/etc/apt/sources.list.d/jenkins.list > /dev/null
-```
-
-### Install Jenkins
-
-```bash
+sudo wget -O /etc/apt/keyrings/jenkins-keyring.asc \
+  https://pkg.jenkins.io/debian-stable/jenkins.io-2026.key
+echo "deb [signed-by=/etc/apt/keyrings/jenkins-keyring.asc]" \
+  https://pkg.jenkins.io/debian-stable binary/ | sudo tee \
+  /etc/apt/sources.list.d/jenkins.list > /dev/null
 sudo apt update
-sudo apt install -y jenkins
+sudo apt install jenkins
 ```
 
 ### Start & Enable Jenkins
 
 ```bash
-sudo systemctl start jenkins
 sudo systemctl enable jenkins
+sudo systemctl start jenkins
+sudo systemctl status jenkins
 ```
 
 ### Access Jenkins UI
@@ -181,6 +175,21 @@ sudo cat /var/lib/jenkins/secrets/initialAdminPassword
 
 ```bash
 sudo apt install -y docker.io
+
+
+docker run \
+  --name jenkins-docker \
+  --rm \
+  --detach \
+  --privileged \
+  --network jenkins \
+  --network-alias docker \
+  --env DOCKER_TLS_CERTDIR=/certs \
+  --volume jenkins-docker-certs:/certs/client \
+  --volume jenkins-data:/var/jenkins_home \
+  --publish 2376:2376 \
+  docker:dind \
+  --storage-driver overlay2
 ```
 
 ### Enable Docker

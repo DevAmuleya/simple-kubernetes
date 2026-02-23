@@ -1,9 +1,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: simple-kubernetes-app
-  labels:
-    app: simple-kubernetes-app
+  name: simple-kubernetes-deployment
 spec:
   replicas: 2
   selector:
@@ -15,8 +13,8 @@ spec:
         app: simple-kubernetes-app
     spec:
       containers:
-        - name: simple-kubernetes-app
-          image: dworkspace1/simple-kubernetes:latest
+        - name: simple-kubernetes-container
+          image: dworkspace1/simple-kubernetes-app:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 8000
