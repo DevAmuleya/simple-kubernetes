@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: simple-kubernetes-container
-          image: dworkspace1/simple-kubernetes-app:latest
+          image: devamuleya/simple-kubernetes-app:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 8000
