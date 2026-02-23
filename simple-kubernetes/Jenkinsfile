@@ -3,7 +3,7 @@ pipeline {
 
     environment {
         DOCKER_IMAGE = "devamuleya/simple-kubernetes-app"
-        DOCKER_TAG = "latest"
+        DOCKER_TAG = "${BUILD_NUMBER}"   // ✅ Use unique tag per build
     }
 
     stages {
@@ -16,34 +16,42 @@ pipeline {
 
         stage('Build Image') {
             steps {
-                // Use double quotes to allow Groovy variable expansion
-                sh "docker build -t ${DOCKER_IMAGE}:${DOCKER_TAG} ./simple-kubernetes"
+                sh """
+                docker build -t ${DOCKER_IMAGE}:${DOCKER_TAG} ./simple-kubernetes
+                """
             }
         }
 
         stage('Docker Login') {
             steps {
                 withCredentials([usernamePassword(
-                    credentialsId: 'dockerhub-creds', // Make sure this matches Jenkins credential ID
+                    credentialsId: 'dockerhub-creds',
                     usernameVariable: 'DOCKER_USER',
                     passwordVariable: 'DOCKER_PASS'
                 )]) {
-                    // Using Groovy string interpolation
-                    sh "echo ${DOCKER_PASS} | docker login -u ${DOCKER_USER} --password-stdin"
+                    sh """
+                    echo ${DOCKER_PASS} | docker login -u ${DOCKER_USER} --password-stdin
+                    """
                 }
             }
         }
 
         stage('Push Image') {
             steps {
-                sh "docker push ${DOCKER_IMAGE}:${DOCKER_TAG}"
+                sh """
+                docker push ${DOCKER_IMAGE}:${DOCKER_TAG}
+                """
             }
         }
 
         stage('Deploy to Kubernetes') {
             steps {
-                // Apply all YAMLs inside k8s folder
-                sh 'kubectl apply -f ./simple-kubernetes/k8s/'
+                sh """
+                kubectl set image deployment/simple-kubernetes-deployment \
+                simple-kubernetes-container=${DOCKER_IMAGE}:${DOCKER_TAG}
+
+                kubectl rollout status deployment/simple-kubernetes-deployment
+                """
             }
         }
     }
